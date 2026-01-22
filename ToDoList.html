@@ -15,26 +15,33 @@ body {
     background: #f4f6f8;
     min-height: 100vh;
     margin: 0;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
     overflow: hidden;
 }
 
-/* Bubble background layer */
+/* =====================
+   Bubble Background
+   ===================== */
 .bubble-layer {
     position: fixed;
     inset: 0;
     z-index: 0;
-    pointer-events: none;
+    pointer-events: auto;
 }
 
-/* Bubble style */
 .bubble {
     position: absolute;
     border-radius: 50%;
     background: rgba(76, 175, 80, 0.25);
-    animation: float 12s linear infinite;
+    animation: floatUp linear infinite;
+    transition: transform 0.2s ease-out;
 }
 
-@keyframes float {
+@keyframes floatUp {
     from {
         transform: translateY(0);
     }
@@ -43,6 +50,9 @@ body {
     }
 }
 
+/* =====================
+   Container
+   ===================== */
 .todo-container {
     position: relative;
     z-index: 1;
@@ -52,7 +62,26 @@ body {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    margin: 60px auto;
+}
+
+/* Completion pulse animation */
+@keyframes completePulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 15px 35px rgba(76, 175, 80, 0.35);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.todo-container.animate {
+    animation: completePulse 0.35s ease;
 }
 
 h1 {
@@ -83,6 +112,10 @@ h1 {
     cursor: pointer;
 }
 
+.input-group button:hover {
+    background: #43a047;
+}
+
 ul {
     list-style: none;
     padding: 0;
@@ -111,6 +144,21 @@ li {
     font-size: 12px;
     color: #777;
 }
+
+.tooltip{
+    position: fixed;
+    padding:6px 10px;
+    background:rgba(0,0,0,0.75);
+    color:#fff;
+    font-size:12px;
+    border-radius:4px;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.15s ease;
+    white-space:nowrap;
+    z-index:999;
+}
+
 </style>
 </head>
 
@@ -131,17 +179,26 @@ li {
     <div class="footer">Tasks are saved automatically</div>
 </div>
 
+<div class="tooltip" id="tooltip"></div>
+
 <script>
 const taskInput = document.getElementById("taskInput");
 const taskList = document.getElementById("taskList");
 const bubbleLayer = document.getElementById("bubbleLayer");
+const container = document.querySelector(".todo-container");
 
 let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
 
+/* =====================
+   Storage
+   ===================== */
 function saveTasks() {
     localStorage.setItem("tasks", JSON.stringify(tasks));
 }
 
+/* =====================
+   Render Tasks
+   ===================== */
 function renderTasks() {
     taskList.innerHTML = "";
 
@@ -167,24 +224,42 @@ function renderTasks() {
     });
 }
 
-function renderBubbles() {
-    bubbleLayer.innerHTML = "";
+/* =====================
+   Render Bubbles
+   ===================== */
+function renderBubbles(){
+    bubbleLayer.innerHTML="";
 
-    tasks.filter(t => t.completed).forEach(() => {
-        const bubble = document.createElement("div");
-        bubble.className = "bubble";
+    tasks.filter(t=>t.completed).forEach(task=>{
+        const bubble= document.createElement("div");
+        bubble.className="bubble";
 
-        const size = Math.random() * 60 + 20;
-        bubble.style.width = size + "px";
-        bubble.style.height = size + "px";
-        bubble.style.left = Math.random() * 100 + "vw";
-        bubble.style.bottom = "-100px";
-        bubble.style.animationDuration = Math.random() * 10 + 10 + "s";
+        const size=Math.random()*60+20;
+        bubble.style.width=size+"px";
+        bubble.style.height=size+"px";
+        bubble.style.left=Math.random()*100+"vw";
+        bubble.style.bottom="-120px";
+        bubble.style.animationDuration=Math.random()*10+10+"s";
+
+        bubble.dataset.depth=Math.random()*0.6+0.2;
+        bubble.dataset.task=task.text;
 
         bubbleLayer.appendChild(bubble);
     });
 }
 
+/* =====================
+   Animations
+   ===================== */
+function animateContainer() {
+    container.classList.remove("animate");
+    void container.offsetWidth; // force reflow
+    container.classList.add("animate");
+}
+
+/* =====================
+   Actions
+   ===================== */
 function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
@@ -200,8 +275,46 @@ function completeTask(index) {
     saveTasks();
     renderTasks();
     renderBubbles();
+    animateContainer();
 }
 
+/* =====================
+   Mouse Parallax
+  s ===================== */
+document.addEventListener("mousemove", (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 30;
+    const y = (e.clientY / window.innerHeight - 0.5) * 30;
+
+    document.querySelectorAll(".bubble").forEach(bubble => {
+        const depth = bubble.dataset.depth;
+        bubble.style.transform = `translate(${x * depth}px, ${y * depth}px)`;
+    });
+});
+
+/* =====================
+   Tooltip
+   ===================== */
+const tooltip=document.getElementById("tooltip");
+
+bubbleLayer.addEventListener("mouseover",(e)=>{
+    if(!e.target.classList.contains("bubble")) return;
+
+    tooltip.textContent=e.target.dataset.task;
+    tooltip.style.opacity="1";
+});
+bubbleLayer.addEventListener("mousemove",(e)=>{
+    tooltip.style.left=e.clientX+12+"px";
+    tooltip.style.top=e.clientY+12+"px";
+});
+bubbleLayer.addEventListener("mouseout",(e)=>{
+    if(!e.target.classList.contains("bubble"))return;
+    tooltip.style.opacity="0";
+});
+
+
+/* =====================
+   Init
+   ===================== */
 taskInput.addEventListener("keypress", e => {
     if (e.key === "Enter") addTask();
 });
