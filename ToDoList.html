@@ -37,17 +37,7 @@ body {
     position: absolute;
     border-radius: 50%;
     background: rgba(76, 175, 80, 0.25);
-    animation: floatUp linear infinite;
     transition: transform 0.2s ease-out;
-}
-
-@keyframes floatUp {
-    from {
-        transform: translateY(0);
-    }
-    to {
-        transform: translateY(-120vh);
-    }
 }
 
 /* =====================
@@ -230,16 +220,21 @@ function renderTasks() {
 function renderBubbles(){
     bubbleLayer.innerHTML="";
 
+    const width=window.innerWidth;
+    const height=window.innerHeight;
+
     tasks.filter(t=>t.completed).forEach(task=>{
         const bubble= document.createElement("div");
         bubble.className="bubble";
 
-        const size=Math.random()*60+20;
+        const size=Math.random()*50+25;
+        const x=Math.random()*(width-size);
+        const y=Math.random()*(height-size);
+        
         bubble.style.width=size+"px";
         bubble.style.height=size+"px";
-        bubble.style.left=Math.random()*100+"vw";
-        bubble.style.bottom="-120px";
-        bubble.style.animationDuration=Math.random()*10+10+"s";
+        bubble.style.left=x+"px";
+        bubble.style.top=y+"px";
 
         bubble.dataset.depth=Math.random()*0.6+0.2;
         bubble.dataset.task=task.text;
